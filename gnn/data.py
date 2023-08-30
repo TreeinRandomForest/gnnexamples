@@ -2,6 +2,9 @@ import os
 import re
 import glob
 
+import torch
+from torch_geometric.data import Data
+
 '''
 Take from Reza's colab notebook
 '''

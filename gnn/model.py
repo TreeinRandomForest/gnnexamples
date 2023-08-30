@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
 
@@ -8,7 +9,7 @@ class GNNModel(nn.Module):
                  out_dim=20,
                  layer_dims=[16, 32]):
 
-        super(GNNModel, self).__init__()
+        super().__init__()
 
         layer_dims = [in_node_dim] + layer_dims
 
@@ -16,8 +17,8 @@ class GNNModel(nn.Module):
 
         for idx in range(1, len(layer_dims)):
 
-            layer = self.GCNConv(in_channels=layer_dims[idx-1],
-                                 out_channels=layer_dims[idx])
+            layer = GCNConv(in_channels=layer_dims[idx-1],
+                            out_channels=layer_dims[idx])
             
             self.conv_layers.append(layer)
 
@@ -26,10 +27,10 @@ class GNNModel(nn.Module):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = self.conv2(x, edge_index)
-        x = x.relu()
+        for l in self.conv_layers:
+            x = l(x, edge_index)
+            x = x.relu()
+
         x = self.fc(x)
         x = torch.mean(x, dim=0, keepdim=True) #graph logits
         
