@@ -35,3 +35,17 @@ class GNNModel(nn.Module):
         x = torch.mean(x, dim=0, keepdim=True) #graph logits
         
         return x
+    
+# Define the encoding model (RNN) architecture
+
+class InputEncoder(nn.Module):
+    def __init__(self,
+                 in_dim,
+                 hidden_dim,
+                 out_dim,
+                 num_layers,
+                 bidirections=True):
+        
+        super().__init__()
+        pass
+

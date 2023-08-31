@@ -298,4 +298,10 @@ def graph_to_data(G, label):
     y = torch.tensor([label])
     
     return Data(x=x, edge_index=edge_index, y=y)
-    
+
+def read_dataset(folder):
+    g = read_graphs(folder)
+
+    g = [graph_to_data(x, idx) for idx, x in enumerate(g)]
+
+    return g
