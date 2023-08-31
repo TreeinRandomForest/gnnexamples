@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn.aggr import MeanAggregation
 
 # Define the GNN architecture
 class GNNModel(nn.Module):
@@ -24,6 +25,8 @@ class GNNModel(nn.Module):
 
         self.fc = nn.Linear(layer_dims[-1], out_dim)
 
+        self.aggr = MeanAggregation()
+
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         
@@ -32,12 +35,13 @@ class GNNModel(nn.Module):
             x = x.relu()
 
         x = self.fc(x)
-        #x = torch.mean(x, dim=0, keepdim=True) #graph logits
-        
-        #don't aggregate here since data is generally a batch
-        #x needs to be split by data.ptr and aggregated to return
-        #tensor of shape (batch_size, x.shape[1])
-        #agg in training loop in train.py        
+
+        if 'ptr' in data:
+            x = self.aggr(x, ptr=data.ptr) #computes per-graph embedding
+
+            assert x.shape[0]==len(data.ptr)-1, f"pred.shape={pred.shape}"
+        else:
+            x = x.mean(dim=0).unsqueeze(0) #average across nodes
 
         return x
     

@@ -25,9 +25,6 @@ def train(model,
 
         for idx, data in enumerate(dl):
             pred = model(data)
-            pred = aggr(pred, ptr=data.ptr) #computes per-graph embedding
-
-            assert pred.shape[0]<=dl.batch_size, f"pred.shape={pred.shape}"
 
             loss = criterion(pred, 
                              data.y)
@@ -43,12 +40,3 @@ def train(model,
             print(f'Epoch = {i} Training Loss = {total_loss:.3f}')
 
     return model, optimizer
-
-# Define the evaluation function
-def evaluate(model, data):
-    model.eval()
-    with torch.no_grad():
-        output = model(data)
-        predicted_labels = output > 0.5  # Threshold the output for binary predictions
-        accuracy = (predicted_labels == data.y).all(dim=1).float().mean()
-    return accuracy.item()
