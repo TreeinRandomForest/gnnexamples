@@ -32,8 +32,13 @@ class GNNModel(nn.Module):
             x = x.relu()
 
         x = self.fc(x)
-        x = torch.mean(x, dim=0, keepdim=True) #graph logits
+        #x = torch.mean(x, dim=0, keepdim=True) #graph logits
         
+        #don't aggregate here since data is generally a batch
+        #x needs to be split by data.ptr and aggregated to return
+        #tensor of shape (batch_size, x.shape[1])
+        #agg in training loop in train.py        
+
         return x
     
 # Define the encoding model (RNN) architecture
