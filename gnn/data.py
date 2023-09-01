@@ -563,12 +563,57 @@ def live_feat(filename, function_num):
 
   return [live_list, adj_list, BB_instr]
 
-def read_graphs(folder):
+def read_graphs(folder, func=adj_mat_fun, **kwargs):
     files = glob.glob(f'{folder}{os.sep}*.ssa.c')
 
-    graphs = [adj_mat_fun(f) for f in files]
+    graphs = [func(f, **kwargs) for f in files]
 
     return graphs
+
+def process_bb(bb_list):
+    ops = []
+    for bb in bb_list:
+        ins_list = []
+        for ins in bb:
+            if ins.find('=') > -1:
+                ins_list.append(ins.split('=')[1].strip())
+        ops.append(ins_list)
+
+    expr = '[a-z]*_[0-9]{1,3}[(D)]*'
+    ops_clean = []
+    for ins_list in ops:
+        ins_clean_list = []
+        for line in ins_list:
+            if m := re.findall(expr, line):
+                for k in m:
+                    line = line.replace(k, "ARG")
+                    
+                    #CUSTOM PROCESSING PIPELINE HERE
+
+            ins_clean_list.append(line)
+
+        ops_clean.append(ins_clean_list)
+
+    return ops, ops_clean
+
+def read_graphs_for_rnn(folder, func=adj_mat_fun, **kwargs):
+    files = glob.glob(f'{folder}{os.sep}*.ssa.c')
+
+    graphs = [func(f, **kwargs) for f in files]
+
+    data = []
+    for g in graphs:
+        edge_index = torch.tensor(list(g[1])).t().contiguous()
+
+        bb_list = g[2] #list of bb instructions
+        
+        ops, ops_clean = process_bb(bb_list)
+
+        data.append((g[1], ops, ops_clean))
+
+    assert len(data)==len(files)
+
+    return data
 
 def graph_to_data(G, label):
     edge_index = torch.tensor(list(G[1])).t().contiguous()
@@ -585,27 +630,3 @@ def read_dataset(folder):
     g = [graph_to_data(x, idx) for idx, x in enumerate(g)]
 
     return g
-
-def test_instr():
-    '''Very hacky for now
-    '''
-    files = glob.glob('data/*.ssa.c')
-
-    a,b,c = live_feat(files[0], 0)
-
-    d = []
-    for bb in c:
-        for l in bb:
-            if l.find('=') > -1:
-                d.append(l.split('=')[1].strip())
-
-    expr = '[a-z]*_[0-9]{1,3}[(D)]*'
-    d_clean = []
-    for l in d:
-        if m := re.findall(expr, l):
-            for k in m:
-                l = l.replace(k, "ARG")
-            d_clean.append(l)
-
-
-    return d, d_clean
