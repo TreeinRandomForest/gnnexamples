@@ -563,12 +563,12 @@ def live_feat(filename, function_num):
 
   return [live_list, adj_list, BB_instr]
 
-def read_graphs(folder, func=adj_mat_fun, **kwargs):
-    files = glob.glob(f'{folder}{os.sep}*.ssa.c')
+#----------------------
 
-    graphs = [func(f, **kwargs) for f in files]
-
-    return graphs
+# data = read_graphs_for_rnn('data', live_feat, function_num=0)
+# read_graphs_for_rnn calls process_bb
+#
+#
 
 def process_bb(bb_list):
     ops = []
@@ -589,10 +589,26 @@ def process_bb(bb_list):
                     line = line.replace(k, "ARG")
                     
                     #CUSTOM PROCESSING PIPELINE HERE
+                    #going to be very hacky for now
+                    line = line.replace("ARG", "")
+                    line = line.replace("(long unsigned int)", "")
+                    
+                    line = line.strip().rstrip(";").strip()
+                    
+                    for sym in ['+', '-', '*', '/']:
+                        if line.find(sym) > -1:
+                            line = sym
+                    if line.find('__MEM') > -1:
+                        line = 'M'
+                    if line.find("PHI") > -1:
+                        line = 'PHI'
 
-            ins_clean_list.append(line)
+                    if re.findall('^[0-9];', line):
+                        line = ''
 
-        ops_clean.append(ins_clean_list)
+            if len(line): ins_clean_list.append(line)
+
+        if len(ins_clean_list): ops_clean.append(ins_clean_list)
 
     return ops, ops_clean
 
@@ -614,6 +630,7 @@ def read_graphs_for_rnn(folder, func=adj_mat_fun, **kwargs):
     assert len(data)==len(files)
 
     return data
+#----------------------
 
 def graph_to_data(G, label):
     edge_index = torch.tensor(list(G[1])).t().contiguous()
@@ -630,3 +647,11 @@ def read_dataset(folder):
     g = [graph_to_data(x, idx) for idx, x in enumerate(g)]
 
     return g
+
+def read_graphs(folder, func=adj_mat_fun, **kwargs):
+    files = glob.glob(f'{folder}{os.sep}*.ssa.c')
+
+    graphs = [func(f, **kwargs) for f in files]
+
+    return graphs
+
