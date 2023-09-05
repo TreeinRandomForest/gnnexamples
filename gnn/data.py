@@ -1,6 +1,7 @@
 import os
 import re
 import glob
+import numpy as np
 
 import torch
 from torch_geometric.data import Data
@@ -584,6 +585,7 @@ def process_bb(bb_list):
     for ins_list in ops:
         ins_clean_list = []
         for line in ins_list:
+            #regex matching
             if m := re.findall(expr, line):
                 for k in m:
                     line = line.replace(k, "ARG")
@@ -595,18 +597,25 @@ def process_bb(bb_list):
                     
                     line = line.strip().rstrip(";").strip()
                     
-                    for sym in ['+', '-', '*', '/']:
-                        if line.find(sym) > -1:
-                            line = sym
-                    if line.find('__MEM') > -1:
-                        line = 'M'
-                    if line.find("PHI") > -1:
-                        line = 'PHI'
+            found = False
+            for sym in ['+', '-', '*', '/']:
+                if line.find(sym) > -1:
+                    line = sym
+                    found = True
 
-                    if re.findall('^[0-9];', line):
-                        line = ''
+            if line.find('__MEM') > -1:
+                line = 'M'
+                found = True
 
-            if len(line): ins_clean_list.append(line)
+            if line.find("PHI") > -1:
+                line = 'PHI'
+                found = True
+
+            if re.findall('^[0-9]*;', line):
+                line = ''                        
+
+            #if len(line): ins_clean_list.append(line)
+            if found: ins_clean_list.append(line)
 
         if len(ins_clean_list): ops_clean.append(ins_clean_list)
 
@@ -630,7 +639,28 @@ def read_graphs_for_rnn(folder, func=adj_mat_fun, **kwargs):
     assert len(data)==len(files)
 
     return data
+
+def generate_vocab(folder,
+                   func=adj_mat_fun,
+                   **kwargs):
+    
+    data = read_graphs_for_rnn(folder, func=func, **kwargs)
+
+    words = [d[2] for d in data]
+
+    vocab = []
+    for app in words:
+        for bb in app:
+            for line in bb:
+                vocab.append(line)
+    vocab = np.unique(vocab)
+
+    return vocab
 #----------------------
+
+# These are functions when not generating embeddings
+# based on an RNN but when using hand-generated features
+#
 
 def graph_to_data(G, label):
     edge_index = torch.tensor(list(G[1])).t().contiguous()
