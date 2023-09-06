@@ -49,12 +49,27 @@ class GNNModel(nn.Module):
 
 class InputEncoder(nn.Module):
     def __init__(self,
+                 word_to_idx,
                  in_dim,
                  hidden_dim,
-                 out_dim,
                  num_layers,
-                 bidirections=True):
+                 bidirectional=True):
         
         super().__init__()
+        
+        self.word_to_idx = word_to_idx
+        vocab_size = len(word_to_idx)
+
+        self.emb = nn.Embedding(num_embeddings=vocab_size,
+                                embedding_dim=in_dim)
+        
+        self.lstm = nn.LSTM(input_size=in_dim,
+                            hidden_size=hidden_dim,
+                            nu_layers=num_layers,
+                            batch_first=True,
+                            bidirectional=bidirectional)
+                
+    
+    def forward(self, x):
         pass
 

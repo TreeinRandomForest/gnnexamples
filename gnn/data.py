@@ -646,16 +646,20 @@ def generate_vocab(folder,
     
     data = read_graphs_for_rnn(folder, func=func, **kwargs)
 
-    words = [d[2] for d in data]
-
     vocab = []
-    for app in words:
+    for app in [d[2] for d in data]:
         for bb in app:
             for line in bb:
                 vocab.append(line)
     vocab = np.unique(vocab)
 
-    return vocab
+    word_to_idx = dict(zip(vocab, np.arange(len(vocab))))
+    idx_to_word = dict(zip(np.arange(len(vocab)), vocab))
+
+    for w in word_to_idx:
+        assert idx_to_word[word_to_idx[w]]==w
+
+    return word_to_idx, idx_to_word
 #----------------------
 
 # These are functions when not generating embeddings
