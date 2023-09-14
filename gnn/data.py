@@ -640,7 +640,7 @@ def read_graphs_for_rnn(folder, func=adj_mat_fun, **kwargs):
 
     return data
 
-def generate_vocab(folder,
+def prepare_data_vocab(folder,
                    func=adj_mat_fun,
                    **kwargs):
     
@@ -659,7 +659,8 @@ def generate_vocab(folder,
     for w in word_to_idx:
         assert idx_to_word[word_to_idx[w]]==w
 
-    return word_to_idx, idx_to_word
+    return word_to_idx, idx_to_word, data
+
 #----------------------
 
 # These are functions when not generating embeddings
