@@ -582,9 +582,10 @@ def process_bb(bb_list):
 
     expr = '[a-z]*_[0-9]{1,3}[(D)]*'
     ops_clean = []
-    for ins_list in ops:
+    for ins_list in ops: #loop over bbs
         ins_clean_list = []
-        for line in ins_list:
+
+        for line in ins_list: #loop over ins in a bb
             #regex matching
             if m := re.findall(expr, line):
                 for k in m:
@@ -617,7 +618,10 @@ def process_bb(bb_list):
             #if len(line): ins_clean_list.append(line)
             if found: ins_clean_list.append(line)
 
-        if len(ins_clean_list): ops_clean.append(ins_clean_list)
+        if len(ins_clean_list): 
+            ops_clean.append(ins_clean_list)
+        else:
+            ops_clean.append(['BLANK'])
 
     return ops, ops_clean
 

@@ -63,5 +63,6 @@ graph = Data(edge_index=edge_index,
 
 assert graph.x.requires_grad
 
-# gnn(graph) - fails because of faulty data#
+out = gnn(graph)
+print(out.shape)
 # more nodes specified in edge_list than in node_feats 
