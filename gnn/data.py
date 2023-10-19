@@ -640,6 +640,22 @@ def read_graphs_for_rnn(folder, func=adj_mat_fun, **kwargs):
 
     return data
 
+def map_ins_to_idx(data,
+                   word_to_idx):
+    
+    data_emb = []
+    for g in data:
+        edge_index, _, bb_ins = g
+
+        bb_ins_idx = []
+        for bb in bb_ins:
+            bb_ins_idx.append(torch.tensor([word_to_idx[k] for k in bb]))
+
+        #bb_ins_idx = pad_sequence(bb_ins_idx, padding_value=len(word_to_idx)+1)
+        data_emb.append((edge_index, bb_ins_idx))
+
+    return data_emb
+
 def prepare_data_vocab(folder,
                    func=adj_mat_fun,
                    **kwargs):
@@ -662,22 +678,6 @@ def prepare_data_vocab(folder,
     data_emb = map_ins_to_idx(data, word_to_idx)
 
     return word_to_idx, idx_to_word, data, data_emb
-
-def map_ins_to_idx(data,
-                   word_to_idx):
-    
-    data_emb = []
-    for g in data:
-        edge_index, _, bb_ins = g
-
-        bb_ins_idx = []
-        for bb in bb_ins:
-            bb_ins_idx.append(torch.tensor([word_to_idx[k] for k in bb]))
-
-        #bb_ins_idx = pad_sequence(bb_ins_idx, padding_value=len(word_to_idx)+1)
-        data_emb.append((edge_index, bb_ins_idx))
-
-    return data_emb
 
 #----------------------
 

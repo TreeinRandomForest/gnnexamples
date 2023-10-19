@@ -9,13 +9,13 @@ from torch.nn.utils.rnn import pad_sequence,\
 # Define the GNN architecture
 class GNNModel(nn.Module):
     def __init__(self,
-                 in_node_dim=2,
+                 in_dim=2,
                  out_dim=20,
                  layer_dims=[16, 32]):
 
         super().__init__()
 
-        layer_dims = [in_node_dim] + layer_dims
+        layer_dims = [in_dim] + layer_dims
 
         self.conv_layers = nn.ModuleList({})
 
