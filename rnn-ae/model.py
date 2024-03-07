@@ -10,6 +10,11 @@ from data import *
 
 d = gen_data()
 
+'''TODO:
+- clean code, add config file
+- training loop - loop over data, backward pass, sgd, test on holdout set
+'''
+
 N_max = 200
 word_to_idx = dict(zip(np.arange(N_max), np.arange(N_max)))
 
@@ -84,8 +89,11 @@ for i in range(x.shape[0]-1):
         start_val=-1
     else:
         start_val = x[i-1].item()
-        
-    out, (h_n, c_n) = dec(torch.tensor(start_val).unsqueeze(0).unsqueeze(1).float(), (state_h, state_c))
+
+    if i==0:
+        out, (h_n, c_n) = dec(torch.tensor(start_val).unsqueeze(0).unsqueeze(1).float(), (state_h, state_c))
+    else:
+        out, (h_n, c_n) = dec(torch.tensor(start_val).unsqueeze(0).unsqueeze(1).float())
 
     pred = output_layer(out)
     outs.append(torch.argmax(pred, dim=1))
