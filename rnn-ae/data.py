@@ -1,6 +1,6 @@
 import numpy as np
 
-def gen_data(n_examples=10,
+def gen_data(n_examples=1000,
              start_low=0, start_high=10,
              delta_low=1, delta_high=5,
              len_low=5, len_high=30):
