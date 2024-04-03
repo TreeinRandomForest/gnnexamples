@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn.utils.rnn import pad_sequence,\
                                 pack_sequence,\
-                                pad_packed_sequence
+                                pad_packed_sequence,\
+                                pack_padded_sequence
 
 from data import *
 from config import *
@@ -57,11 +58,13 @@ class AE_rnn(nn.Module):
                 hidden_dim_dec = 9,
                 emb_dim        = 11,
                 N_max          = 256):
-                super().__init__()
-                self.dir            = 2 if bidir else 1
 
+                super().__init__()
+
+                self.dir            = 2 if bidir else 1
                 self.num_layers_dec = num_layers_dec
                 self.batch_size     = batch_size
+
                 self.enc = nn.LSTM(input_size=emb_dim,
                         bidirectional=True,
                         num_layers= num_layers_enc,
@@ -84,15 +87,15 @@ class AE_rnn(nn.Module):
                                 embedding_dim=emb_dim)
 
 
-                self.proj1 = nn.Linear(in_features=dir*num_layers_enc*hidden_dim_enc,#state.shape[1],
-                                out_features=dir*num_layers_dec*hidden_dim_dec) 
+                self.proj1 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec) 
                         
-                self.proj2 = nn.Linear(in_features=dir*num_layers_enc*hidden_dim_enc,#state.shape[1],
-                                out_features=dir*num_layers_dec*hidden_dim_dec)
+                self.proj2 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec)
 
-
-                self.pred  = nn.Linear(in_features=dir*hidden_dim_dec,
-                                        out_features=N_max)
+                self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
+                                      out_features=N_max)
+                
         def forward(self, seq, lengths):
                 padded_seq_emb = self.emb(seq)
                 packed_padded_seq = pack_padded_sequence(padded_seq_emb,
@@ -102,8 +105,8 @@ class AE_rnn(nn.Module):
 
                 out_enc, (hn, cn) = self.enc(packed_padded_seq)
                 #print(hn.shape)
-                hn = self.proj1(hn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2)
-                cn = self.proj2(cn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2)
+                hn = self.proj1(hn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                cn = self.proj2(cn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
                 out_pred = self.pred(out_dec)
                 return out_pred
