@@ -638,6 +638,7 @@ class AutoEncoder_gnnrnn(nn.Module):
 
                 self.dir            = 2 if bidir else 1
                 self.num_layers_dec = num_layers_dec
+                self.hidden_dim_dec = hidden_dim_dec
                 self.batch_size     = batch_size
 
                 self.enc = nn.LSTM(input_size=emb_dim,
@@ -679,19 +680,32 @@ class AutoEncoder_gnnrnn(nn.Module):
                 
         def forward(self, seq, lengths, edge_index):
                 padded_seq_emb = self.emb(seq)
-                packed_padded_seq = pack_padded_sequence(padded_seq_emb,
+                packed_padded_seq_emb = pack_padded_sequence(padded_seq_emb,
                                                         lengths=lengths,#.tolist(),
                                                         batch_first=True,
                                                         enforce_sorted=False)
 
-                out_enc, (hn, cn) = self.enc(packed_padded_seq)
+                out_enc, (hn, cn) = self.enc(packed_padded_seq_emb)
                 
+                #print(hn.shape)
+
                 hn = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index)
                 cn = self.gnn2(cn.permute(1,0,2).flatten(1), edge_index)
-
+                #print(hn.shape)
                 hn = self.proj1(hn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 cn = self.proj2(cn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
-                out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
-                out_pred = self.pred(out_dec)
+                #out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
+                #print(hn.shape)
+                packed_padded_seq = pack_padded_sequence(seq.unsqueeze(2).float(),
+                                                        lengths=lengths,#.tolist(),
+                                                        batch_first=True,
+                                                        enforce_sorted=False)
+                out_dec, (hn_dec, cn_dec) = self.dec(packed_padded_seq, (hn, cn))
+                out_dec = pad_packed_sequence(out_dec,
+                                              batch_first=True)
+               # print(out_dec[0].shape)
+                
+                out_pred = self.pred(out_dec[0])
+                #print(out_pred.shape)
                 return out_pred
                 
