@@ -701,11 +701,10 @@ class AutoEncoder_gnnrnn(nn.Module):
                                                         batch_first=True,
                                                         enforce_sorted=False)
                 out_dec, (hn_dec, cn_dec) = self.dec(packed_padded_seq, (hn, cn))
-                out_dec = pad_packed_sequence(out_dec,
+                out_dec, _ = pad_packed_sequence(out_dec,
                                               batch_first=True)
-               # print(out_dec[0].shape)
                 
-                out_pred = self.pred(out_dec[0])
+                out_pred = self.pred(out_dec)
                 #print(out_pred.shape)
                 return out_pred
                 
