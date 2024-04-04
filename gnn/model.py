@@ -47,6 +47,14 @@ class GNNModel(nn.Module):
             x = self.leaky_relu(x)
 
         x = self.fc(x)
+    
+    def forward(self, x, edge_index):
+        
+        for l in self.conv_layers:
+            x = l(x, edge_index)
+            x = self.leaky_relu(x)
+
+        x = self.fc(x)
         
         '''
         if 'ptr' in data:
@@ -546,3 +554,144 @@ class AE_gnnrnn_gpu(nn.Module):
             outs_bb.append(pred)
 
         return torch.stack(outs_bb)
+
+
+
+class AutoEncoder_rnn(nn.Module):
+        def __init__(self,
+                batch_size     = 2,
+                bidir          = True,
+                num_layers_enc = 3,
+                hidden_dim_enc = 5,
+                num_layers_dec = 7,
+                hidden_dim_dec = 9,
+                emb_dim        = 11,
+                N_max          = 256):
+
+                super().__init__()
+
+                self.dir            = 2 if bidir else 1
+                self.num_layers_dec = num_layers_dec
+                self.batch_size     = batch_size
+
+                self.enc = nn.LSTM(input_size=emb_dim,
+                        bidirectional=True,
+                        num_layers= num_layers_enc,
+                        hidden_size=hidden_dim_enc,
+                        batch_first=True)
+
+                self.enc = nn.LSTM(input_size=emb_dim,
+                                bidirectional=bidir,
+                                num_layers= num_layers_enc,
+                                hidden_size=hidden_dim_enc,
+                                batch_first=True)
+
+                self.dec = nn.LSTM(input_size=1,
+                        bidirectional=bidir,
+                        num_layers= num_layers_dec,
+                        hidden_size=hidden_dim_dec,
+                        batch_first=True)
+
+                self.emb = nn.Embedding(num_embeddings=N_max,
+                                embedding_dim=emb_dim)
+
+                self.proj1 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec) 
+                        
+                self.proj2 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec)
+
+                self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
+                                      out_features=N_max)
+                
+        def forward(self, seq, lengths):
+                padded_seq_emb = self.emb(seq)
+                packed_padded_seq = pack_padded_sequence(padded_seq_emb,
+                                                        lengths=lengths,#.tolist(),
+                                                        batch_first=True,
+                                                        enforce_sorted=False)
+
+                out_enc, (hn, cn) = self.enc(packed_padded_seq)
+                #print(hn.shape)
+                #print(hn.shape)
+                hn = self.proj1(hn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                cn = self.proj2(cn.permute(1,0,2).flatten(1)).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                #print(hn.shape)
+                out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
+                out_pred = self.pred(out_dec)
+                return out_pred
+                
+
+
+class AutoEncoder_gnnrnn(nn.Module):
+        def __init__(self,
+                batch_size     = 2,
+                bidir          = True,
+                num_layers_enc = 3,
+                hidden_dim_enc = 5,
+                num_layers_dec = 7,
+                hidden_dim_dec = 9,
+                emb_dim        = 11,
+                N_max          = 256):
+
+                super().__init__()
+
+                self.dir            = 2 if bidir else 1
+                self.num_layers_dec = num_layers_dec
+                self.batch_size     = batch_size
+
+                self.enc = nn.LSTM(input_size=emb_dim,
+                        bidirectional=True,
+                        num_layers= num_layers_enc,
+                        hidden_size=hidden_dim_enc,
+                        batch_first=True)
+
+                self.enc = nn.LSTM(input_size=emb_dim,
+                                bidirectional=bidir,
+                                num_layers= num_layers_enc,
+                                hidden_size=hidden_dim_enc,
+                                batch_first=True)
+
+                self.dec = nn.LSTM(input_size=1,
+                        bidirectional=bidir,
+                        num_layers= num_layers_dec,
+                        hidden_size=hidden_dim_dec,
+                        batch_first=True)
+
+                self.emb = nn.Embedding(num_embeddings=N_max,
+                                embedding_dim=emb_dim)
+
+
+                self.gnn1 = GNNModel(in_dim=self.dir*num_layers_enc*hidden_dim_enc,
+                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc)
+                
+                self.gnn2 = GNNModel(in_dim=self.dir*num_layers_enc*hidden_dim_enc,
+                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc)
+
+                self.proj1 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec) 
+                        
+                self.proj2 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
+                                      out_features=self.dir*num_layers_dec*hidden_dim_dec)
+
+                self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
+                                      out_features=N_max)
+                
+        def forward(self, seq, lengths, edge_index):
+                padded_seq_emb = self.emb(seq)
+                packed_padded_seq = pack_padded_sequence(padded_seq_emb,
+                                                        lengths=lengths,#.tolist(),
+                                                        batch_first=True,
+                                                        enforce_sorted=False)
+
+                out_enc, (hn, cn) = self.enc(packed_padded_seq)
+                
+                hn = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index)
+                cn = self.gnn2(cn.permute(1,0,2).flatten(1), edge_index)
+
+                hn = self.proj1(hn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                cn = self.proj2(cn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
+                out_pred = self.pred(out_dec)
+                return out_pred
+                

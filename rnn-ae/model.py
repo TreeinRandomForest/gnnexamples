@@ -222,14 +222,11 @@ class AE_gnnrnn(nn.Module):
                                                         lengths=lengths,#.tolist(),
                                                         batch_first=True,
                                                         enforce_sorted=False)
-
                 out_enc, (hn, cn) = self.enc(packed_padded_seq)
-                
                 hn = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index)
                 cn = self.gnn2(cn.permute(1,0,2).flatten(1), edge_index)
-
-                hn = self.proj1(hn).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
-                cn = self.proj2(cn).reshape(self.batch_size,self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                hn = self.proj1(hn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                cn = self.proj2(cn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
                 out_pred = self.pred(out_dec)
                 return out_pred

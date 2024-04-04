@@ -2,15 +2,76 @@ import os
 import re
 import glob
 import numpy as np
-
+from torch.utils.data import Dataset
 import torch
 from torch_geometric.data import Data
 
 from tokenizer import process_bb_tokenizer
 
+from torch.nn.utils.rnn import pad_sequence
 '''
 Take from Reza's colab notebook
 '''
+def concatenate_edge_indices(edge_indices_list):
+    num_nodes_seen = 0
+    edge_index_list = []
+
+    for edge_index in edge_indices_list:
+        # Increment node indices in the second row of edge index
+        edge_index_copy = edge_index.clone()
+        edge_index_copy[1] += num_nodes_seen
+        edge_index_copy[0] += num_nodes_seen
+        edge_index_list.append(edge_index_copy)
+        num_nodes_seen += edge_index.max().item() + 1
+
+    # Concatenate edge indices
+    edge_index = torch.cat(edge_index_list, dim=1)
+
+    return edge_index
+
+def split_pp_into_sublists(pp_list, k):
+    sublists = []
+    current_sublist_node = []
+    current_sublist_edge = []
+    current_bb_count = 0
+
+    for (edge_index, pp_element) in pp_list:
+        if current_bb_count + len(pp_element) <= k:
+            current_sublist_node.extend(pp_element)
+            current_sublist_edge.append(edge_index)
+            current_bb_count += len(pp_element)
+        else:
+            sublists.append((current_sublist_node, concatenate_edge_indices(current_sublist_edge)))
+            current_sublist_node = []
+            current_sublist_node.extend(pp_element)
+            current_sublist_edge = []
+            current_sublist_edge.append(edge_index)
+            current_bb_count = len(pp_element)
+
+    # Add the last sublist
+    if current_sublist_node:
+        sublists.append((current_sublist_node, concatenate_edge_indices(current_sublist_edge)))
+
+    return sublists
+
+def batch_gnn_for_gpu(dataset, device):
+    data_gpu = []
+    for (seq, edge_index) in dataset:
+        seq = [s.to(device) for s in seq]
+        padded_seq = pad_sequence(seq, batch_first=True)
+        lengths = [len(s) for s in seq]
+        data_gpu.append((padded_seq, lengths, edge_index.to(device)))
+    return data_gpu
+
+class CustomData(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
 
 
 def live_feat(filename, function_num):
