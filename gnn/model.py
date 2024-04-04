@@ -678,7 +678,7 @@ class AutoEncoder_gnnrnn(nn.Module):
                 self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
                                       out_features=N_max)
                 
-        def forward(self, seq, lengths, edge_index):
+        def forward(self, seq, seq_dec, lengths, edge_index):
                 padded_seq_emb = self.emb(seq)
                 packed_padded_seq_emb = pack_padded_sequence(padded_seq_emb,
                                                         lengths=lengths,#.tolist(),
@@ -696,7 +696,7 @@ class AutoEncoder_gnnrnn(nn.Module):
                 cn = self.proj2(cn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 #out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
                 #print(hn.shape)
-                packed_padded_seq = pack_padded_sequence(seq.unsqueeze(2).float(),
+                packed_padded_seq = pack_padded_sequence(seq_dec.unsqueeze(2).float(),
                                                         lengths=lengths,#.tolist(),
                                                         batch_first=True,
                                                         enforce_sorted=False)

@@ -17,14 +17,12 @@ def concatenate_edge_indices(edge_indices_list):
     edge_index_list = []
 
     for edge_index in edge_indices_list:
-        # Increment node indices in the second row of edge index
         edge_index_copy = edge_index.clone()
         edge_index_copy[1] += num_nodes_seen
         edge_index_copy[0] += num_nodes_seen
         edge_index_list.append(edge_index_copy)
         num_nodes_seen += edge_index.max().item() + 1
 
-    # Concatenate edge indices
     edge_index = torch.cat(edge_index_list, dim=1)
 
     return edge_index
@@ -57,10 +55,12 @@ def split_pp_into_sublists(pp_list, k):
 def batch_gnn_for_gpu(dataset, device):
     data_gpu = []
     for (seq, edge_index) in dataset:
+        seq_dec = [torch.cat((torch.tensor([-1]), s[:-1]), dim=0).to(device) for s in seq]
+        padded_seq_dec = pad_sequence(seq_dec, batch_first=True)
         seq = [s.to(device) for s in seq]
         padded_seq = pad_sequence(seq, batch_first=True)
         lengths = [len(s) for s in seq]
-        data_gpu.append((padded_seq, lengths, edge_index.to(device)))
+        data_gpu.append((padded_seq, padded_seq_dec, lengths, edge_index.to(device)))
     return data_gpu
 
 class CustomData(Dataset):
