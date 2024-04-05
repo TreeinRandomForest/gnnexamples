@@ -11,6 +11,8 @@ import copy
 from torch.nn import LeakyReLU
 import torch.nn.utils.rnn as rnn  
 
+import random
+
 
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # Define the GNN architecture
@@ -480,11 +482,11 @@ class AE_gnnrnn_gpu(nn.Module):
         super().__init__()
         
         self.word_to_idx = word_to_idx # identity mapping
-        vocab_size = len(word_to_idx)
+        self.vocab_size = len(word_to_idx)
 
-        self.emb = nn.Embedding(num_embeddings=vocab_size+1,
+        self.emb = nn.Embedding(num_embeddings=self.vocab_size+1,
                                 embedding_dim=in_dim,
-                                padding_idx=-1)
+                                padding_idx=self.vocab_size)
         
         self.lstm = nn.LSTM(input_size=in_dim,
                             hidden_size=hidden_dim,
@@ -631,6 +633,7 @@ class AutoEncoder_gnnrnn(nn.Module):
                 hidden_dim_enc = 5,
                 num_layers_dec = 7,
                 hidden_dim_dec = 9,
+                layer_dims_gnn = [16, 32, 16],
                 emb_dim        = 11,
                 N_max          = 256):
 
@@ -653,21 +656,25 @@ class AutoEncoder_gnnrnn(nn.Module):
                                 hidden_size=hidden_dim_enc,
                                 batch_first=True)
 
-                self.dec = nn.LSTM(input_size=1,
+                self.dec = nn.LSTM(input_size=emb_dim,
                         bidirectional=bidir,
                         num_layers= num_layers_dec,
                         hidden_size=hidden_dim_dec,
                         batch_first=True)
 
+                self.pad_idx = N_max-1
                 self.emb = nn.Embedding(num_embeddings=N_max,
-                                embedding_dim=emb_dim)
+                                      embedding_dim=emb_dim,
+                                      padding_idx=self.pad_idx)
 
 
                 self.gnn1 = GNNModel(in_dim=self.dir*num_layers_enc*hidden_dim_enc,
-                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc)
+                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc,
+                                    layer_dims=layer_dims_gnn)
                 
                 self.gnn2 = GNNModel(in_dim=self.dir*num_layers_enc*hidden_dim_enc,
-                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc)
+                                    out_dim=self.dir*num_layers_enc*hidden_dim_enc,
+                                    layer_dims=layer_dims_gnn)
 
                 self.proj1 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
                                       out_features=self.dir*num_layers_dec*hidden_dim_dec) 
@@ -678,14 +685,14 @@ class AutoEncoder_gnnrnn(nn.Module):
                 self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
                                       out_features=N_max)
                 
-        def forward(self, seq, seq_dec, lengths, edge_index):
+        def forward(self, seq, seq_dec, lengths, edge_index, mode="teaching", ratio=1):
                 padded_seq_emb = self.emb(seq)
                 packed_padded_seq_emb = pack_padded_sequence(padded_seq_emb,
                                                         lengths=lengths,#.tolist(),
                                                         batch_first=True,
                                                         enforce_sorted=False)
 
-                out_enc, (hn, cn) = self.enc(packed_padded_seq_emb)
+                _, (hn, cn) = self.enc(packed_padded_seq_emb)
                 
                 #print(hn.shape)
 
@@ -696,15 +703,37 @@ class AutoEncoder_gnnrnn(nn.Module):
                 cn = self.proj2(cn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 #out_dec, (hn_dec, cn_dec) = self.dec(seq.unsqueeze(2).float(), (hn, cn))
                 #print(hn.shape)
-                packed_padded_seq = pack_padded_sequence(seq_dec.unsqueeze(2).float(),
-                                                        lengths=lengths,#.tolist(),
-                                                        batch_first=True,
-                                                        enforce_sorted=False)
-                out_dec, (hn_dec, cn_dec) = self.dec(packed_padded_seq, (hn, cn))
-                out_dec, _ = pad_packed_sequence(out_dec,
-                                              batch_first=True)
-                
-                out_pred = self.pred(out_dec)
+                if mode=="teaching" and random.random()<=ratio:
+                    #print(seq.shape)
+                    padded_seq_emb = self.emb(seq_dec)
+                    packed_padded_seq = pack_padded_sequence(padded_seq_emb,#.unsqueeze(2).float(),
+                                                            lengths=lengths,#.tolist(),
+                                                            batch_first=True,
+                                                            enforce_sorted=False)
+                    out_dec, (_, _)   = self.dec(packed_padded_seq, (hn, cn))
+                    out_dec, _ = pad_packed_sequence(out_dec,
+                                                batch_first=True)
+                    
+                    out_pred = self.pred(out_dec)
+                    #print(torch.argmax(out_pred, dim=2).shape)
+                else:
+                    #seq_dec = seq_dec.unsqueeze(2).float()
+                    input = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
+                    #print(input.shape)
+                    input_emb = self.emb(input)  
+                    outs = []
+                    for i in range(seq.shape[1]):
+                        out_dec, (hn, cn)   = self.dec(input_emb, (hn, cn))
+                        out_pred = self.pred(out_dec)
+                        input = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
+                        input_emb = self.emb(input)
+                        outs.append(out_pred)
+                    out_pred = torch.stack(outs, dim=1).squeeze()
+                    #print(len(lengths), out_pred.shape)
+                    for i in range(out_pred.shape[0]):
+                        len_cur = lengths[i]
+                        out_pred[i,len_cur:,:]=-3.3
+                        out_pred[i,len_cur:,0]=3.3
                 #print(out_pred.shape)
                 return out_pred
                 

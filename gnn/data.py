@@ -9,9 +9,29 @@ from torch_geometric.data import Data
 from tokenizer import process_bb_tokenizer
 
 from torch.nn.utils.rnn import pad_sequence
+
+import random
+
 '''
 Take from Reza's colab notebook
 '''
+
+def shuffle_list(original_list):
+    shuffled_list = original_list[:]
+    random.shuffle(shuffled_list)  
+    return shuffled_list
+
+def split_train_test(dataset, ratio=0.8, shuffle=True):
+    if shuffle:
+        new_dataset = shuffle_list(dataset)
+    else:
+        new_dataset = dataset[:]
+
+    ind_test = int(ratio*len(dataset))
+    return (new_dataset[:ind_test], new_dataset[ind_test:])
+
+
+
 def concatenate_edge_indices(edge_indices_list):
     num_nodes_seen = 0
     edge_index_list = []
@@ -52,10 +72,10 @@ def split_pp_into_sublists(pp_list, k):
 
     return sublists
 
-def batch_gnn_for_gpu(dataset, device):
+def batch_gnn_for_gpu(dataset, device, pad_idx):
     data_gpu = []
     for (seq, edge_index) in dataset:
-        seq_dec = [torch.cat((torch.tensor([-1]), s[:-1]), dim=0).to(device) for s in seq]
+        seq_dec = [torch.cat((torch.tensor([pad_idx]), s[:-1]), dim=0).to(device) for s in seq]
         padded_seq_dec = pad_sequence(seq_dec, batch_first=True)
         seq = [s.to(device) for s in seq]
         padded_seq = pad_sequence(seq, batch_first=True)
