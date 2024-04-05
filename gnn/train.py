@@ -40,3 +40,5 @@ def train(model,
             print(f'Epoch = {i} Training Loss = {total_loss:.3f}')
 
     return model, optimizer
+
+
