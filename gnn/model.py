@@ -732,8 +732,9 @@ class AutoEncoder_gnnrnn(nn.Module):
                     #print(len(lengths), out_pred.shape)
                     for i in range(out_pred.shape[0]):
                         len_cur = lengths[i]
-                        out_pred[i,len_cur:,:]=-3.3
-                        out_pred[i,len_cur:,0]=3.3
+                        out_pred[i,len_cur:,:]=-3.5
+                        out_pred[i,len_cur:,self.pad_idx]=3.5
+                    
                 #print(out_pred.shape)
                 return out_pred
                 

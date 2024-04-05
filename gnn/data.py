@@ -76,9 +76,9 @@ def batch_gnn_for_gpu(dataset, device, pad_idx):
     data_gpu = []
     for (seq, edge_index) in dataset:
         seq_dec = [torch.cat((torch.tensor([pad_idx]), s[:-1]), dim=0).to(device) for s in seq]
-        padded_seq_dec = pad_sequence(seq_dec, batch_first=True)
+        padded_seq_dec = pad_sequence(seq_dec, batch_first=True, padding_value=pad_idx)
         seq = [s.to(device) for s in seq]
-        padded_seq = pad_sequence(seq, batch_first=True)
+        padded_seq = pad_sequence(seq, batch_first=True, padding_value=pad_idx)
         lengths = [len(s) for s in seq]
         data_gpu.append((padded_seq, padded_seq_dec, lengths, edge_index.to(device)))
     return data_gpu
