@@ -730,10 +730,12 @@ class AutoEncoder_gnnrnn(nn.Module):
                         outs.append(out_pred)
                     out_pred = torch.stack(outs, dim=1).squeeze()
                     #print(len(lengths), out_pred.shape)
+                    '''
                     for i in range(out_pred.shape[0]):
                         len_cur = lengths[i]
                         out_pred[i,len_cur:,:]=-3.5
                         out_pred[i,len_cur:,self.pad_idx]=3.5
+                    '''
                     
                 #print(out_pred.shape)
                 return out_pred
