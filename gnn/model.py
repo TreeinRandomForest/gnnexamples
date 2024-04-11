@@ -685,7 +685,7 @@ class AutoEncoder_gnnrnn(nn.Module):
                 self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec,
                                       out_features=N_max)
                 
-        def forward(self, seq, seq_dec, lengths, edge_index, mode="teaching", ratio=1):
+        def forward(self, seq, seq_dec, lengths, edge_index, mode="teaching", ratio=1, ratio_mix=0.5):
                 padded_seq_emb = self.emb(seq)
                 packed_padded_seq_emb = pack_padded_sequence(padded_seq_emb,
                                                         lengths=lengths,#.tolist(),
@@ -716,6 +716,30 @@ class AutoEncoder_gnnrnn(nn.Module):
                     
                     out_pred = self.pred(out_dec)
                     #print(torch.argmax(out_pred, dim=2).shape)
+                elif mode=="mix":
+                    #seq_dec = seq_dec.unsqueeze(2).float()
+                    input = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
+                    #print(input.shape)
+                    input_emb = self.emb(input)  
+                    outs = []
+                    for i in range(seq.shape[1]):
+                        out_dec, (hn, cn)   = self.dec(input_emb, (hn, cn))
+                        out_pred = self.pred(out_dec)
+                        if random.random()<=ratio_mix:
+                            input = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
+                        else:
+                           input = seq_dec.unsqueeze(2)[:,i,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
+                        input_emb = self.emb(input)  
+                        outs.append(out_pred)
+                        
+                    out_pred = torch.stack(outs, dim=1).squeeze()
+                    #print(len(lengths), out_pred.shape)
+                    '''
+                    for i in range(out_pred.shape[0]):
+                        len_cur = lengths[i]
+                        out_pred[i,len_cur:,:]=-3.5
+                        out_pred[i,len_cur:,self.pad_idx]=3.5
+                    '''
                 else:
                     #seq_dec = seq_dec.unsqueeze(2).float()
                     input = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
