@@ -715,24 +715,28 @@ class AutoEncoder_gnnrnn(nn.Module):
                                                 batch_first=True)
                     
                     out_pred = self.pred(out_dec)
+                  #  print("teaching:", out_pred.shape)
                     #print(torch.argmax(out_pred, dim=2).shape)
                 elif mode=="mix":
                     #seq_dec = seq_dec.unsqueeze(2).float()
-                    input = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
+                    input_ind = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
                     #print(input.shape)
-                    input_emb = self.emb(input)  
+                    input_emb = self.emb(input_ind)  
                     outs = []
-                    for i in range(seq.shape[1]):
+                    for i in range(1, seq_dec.shape[1]):
                         out_dec, (hn, cn)   = self.dec(input_emb, (hn, cn))
                         out_pred = self.pred(out_dec)
                         if random.random()<=ratio_mix:
-                            input = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
+                            input_ind = seq_dec.unsqueeze(2)[:,i,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
                         else:
-                           input = seq_dec.unsqueeze(2)[:,i,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
-                        input_emb = self.emb(input)  
+                            input_ind = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
+                        input_emb = self.emb(input_ind)  
                         outs.append(out_pred)
-                        
+                    out_dec, (hn, cn)   = self.dec(input_emb, (hn, cn))
+                    out_pred = self.pred(out_dec)  
+                    outs.append(out_pred) 
                     out_pred = torch.stack(outs, dim=1).squeeze()
+                   # print("mix:", out_pred.shape)
                     #print(len(lengths), out_pred.shape)
                     '''
                     for i in range(out_pred.shape[0]):
@@ -742,17 +746,18 @@ class AutoEncoder_gnnrnn(nn.Module):
                     '''
                 else:
                     #seq_dec = seq_dec.unsqueeze(2).float()
-                    input = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
+                    input_ind = seq_dec.unsqueeze(2)[:,0,:]#.float().unsqueeze(2)#torch.full((len(lengths), 1, 1), -1).float()  
                     #print(input.shape)
-                    input_emb = self.emb(input)  
+                    input_emb = self.emb(input_ind)  
                     outs = []
                     for i in range(seq.shape[1]):
                         out_dec, (hn, cn)   = self.dec(input_emb, (hn, cn))
                         out_pred = self.pred(out_dec)
-                        input = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
-                        input_emb = self.emb(input)
+                        input_ind = torch.argmax(out_pred, dim=2)#.float().unsqueeze(2)
+                        input_emb = self.emb(input_ind)
                         outs.append(out_pred)
                     out_pred = torch.stack(outs, dim=1).squeeze()
+                    #print("rec:", out_pred.shape)
                     #print(len(lengths), out_pred.shape)
                     '''
                     for i in range(out_pred.shape[0]):
@@ -762,5 +767,6 @@ class AutoEncoder_gnnrnn(nn.Module):
                     '''
                     
                 #print(out_pred.shape)
+                
                 return out_pred
                 

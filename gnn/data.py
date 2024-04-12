@@ -30,7 +30,29 @@ def split_train_test(dataset, ratio=0.8, shuffle=True):
     ind_test = int(ratio*len(dataset))
     return (new_dataset[:ind_test], new_dataset[ind_test:])
 
+def count_occurrences(dataset, word_to_idx, device):
+    y = []
+    for (x, edge) in dataset:
+        for bb in x:
+            y.extend(bb.tolist())
+    unique_classes, class_counts = np.unique(y, return_counts=True)
+    
+    inverse_frequencies = 1.0 / (class_counts*0.0001)
+    
+    log_scaled_inverse_frequencies = np.log(1 + inverse_frequencies)
 
+    total_classes = len(unique_classes)
+    normalized_weights = total_classes * (log_scaled_inverse_frequencies / np.sum(log_scaled_inverse_frequencies))
+
+    occurrences = {cls: weight for cls, weight in zip(unique_classes, normalized_weights)}
+
+    sum_weight = 0
+    for i in range(len(word_to_idx)):
+        if i in occurrences:
+            sum_weight += occurrences[i]
+    weights = [occurrences[i] if i in occurrences else np.min(normalized_weights) for i in range(len(word_to_idx))]
+    weights.append(np.min(normalized_weights))
+    return torch.tensor(weights).float().to(device)
 
 def concatenate_edge_indices(edge_indices_list):
     num_nodes_seen = 0
