@@ -1,5 +1,6 @@
 {
 "config_1":    {
+        "is_gnn": true,
         "bidir": true,
         "batch_size": 64,
         "num_layers_enc": 2,
@@ -13,6 +14,7 @@
         "epoch_num": 200
     },
 "config_2":    {
+        "is_gnn": true,
         "bidir": true,
         "batch_size": 64,
         "num_layers_enc": 4,
@@ -26,6 +28,7 @@
         "epoch_num": 200
     },
 "config_3":    {
+        "is_gnn": true,
         "bidir": false,
         "batch_size": 64,
         "num_layers_enc": 1,
@@ -39,6 +42,7 @@
         "epoch_num": 200
     },
 "config_4":    {
+        "is_gnn": true,
         "bidir": true,
         "batch_size": 32,
         "num_layers_enc": 2,
