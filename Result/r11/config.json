@@ -23,7 +23,7 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.3,
+        "ratio_mix": 0.75,
         "layer_dims_gnn": [
             64
         ],
@@ -53,7 +53,7 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.3,
+        "ratio_mix": 0.75,
         "layer_dims_gnn": [
             64
         ],

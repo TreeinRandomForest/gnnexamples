@@ -1,0 +1,44 @@
+{
+"config_1":    {
+        "is_gnn": true,
+        "bidir": true,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 32,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
+        "layer_dims_gnn": [
+            128, 64
+        ],
+        "epoch_num": 200
+    },
+"config_2":    {
+        "is_gnn": true,
+        "bidir": true,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 32,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
+        "layer_dims_gnn": [
+            128
+        ],
+        "epoch_num": 200
+    },
+"config_3":    {
+        "is_gnn": false,
+        "bidir": true,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 32,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
+        "layer_dims_gnn": [
+            64
+        ],
+        "epoch_num": 200
+    }
+}

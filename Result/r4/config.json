@@ -8,9 +8,8 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.5,
         "layer_dims_gnn": [
-            64
+            32, 16
         ],
         "epoch_num": 200
     },
@@ -23,9 +22,8 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.3,
         "layer_dims_gnn": [
-            64
+            32
         ],
         "epoch_num": 200
     },
@@ -38,24 +36,8 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.5,
         "layer_dims_gnn": [
-            64
-        ],
-        "epoch_num": 200
-    },
-"config_4":    {
-        "is_gnn": false,
-        "bidir": true,
-        "batch_size": 64,
-        "num_layers_enc": 2,
-        "hidden_dim_enc": 64,
-        "num_layers_dec": 2,
-        "hidden_dim_dec": 64,
-        "emb_dim": 64,
-        "ratio_mix": 0.3,
-        "layer_dims_gnn": [
-            64
+            32, 16
         ],
         "epoch_num": 200
     }

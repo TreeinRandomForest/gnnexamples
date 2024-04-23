@@ -6,9 +6,8 @@
         "num_layers_enc": 2,
         "hidden_dim_enc": 64,
         "num_layers_dec": 2,
-        "hidden_dim_dec": 64,
-        "emb_dim": 64,
-        "ratio_mix": 0.5,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
         "layer_dims_gnn": [
             64
         ],
@@ -21,16 +20,15 @@
         "num_layers_enc": 2,
         "hidden_dim_enc": 64,
         "num_layers_dec": 2,
-        "hidden_dim_dec": 64,
-        "emb_dim": 64,
-        "ratio_mix": 0.3,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
         "layer_dims_gnn": [
-            64
+            64, 32
         ],
         "epoch_num": 200
     },
 "config_3":    {
-        "is_gnn": false,
+        "is_gnn": true,
         "bidir": true,
         "batch_size": 64,
         "num_layers_enc": 2,
@@ -38,13 +36,26 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.5,
         "layer_dims_gnn": [
             64
         ],
         "epoch_num": 200
     },
 "config_4":    {
+        "is_gnn": true,
+        "bidir": true,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 64,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 64,
+        "emb_dim": 64,
+        "layer_dims_gnn": [
+            64, 32
+        ],
+        "epoch_num": 200
+    },
+"config_5":    {
         "is_gnn": false,
         "bidir": true,
         "batch_size": 64,
@@ -53,7 +64,34 @@
         "num_layers_dec": 2,
         "hidden_dim_dec": 64,
         "emb_dim": 64,
-        "ratio_mix": 0.3,
+        "layer_dims_gnn": [
+            64
+        ],
+        "epoch_num": 200
+    },
+"config_6":    {
+        "is_gnn": false,
+        "bidir": true,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 32,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
+        "layer_dims_gnn": [
+            64
+        ],
+        "epoch_num": 200
+    },
+"config_7":    {
+        "is_gnn": false,
+        "bidir": false,
+        "batch_size": 64,
+        "num_layers_enc": 2,
+        "hidden_dim_enc": 32,
+        "num_layers_dec": 2,
+        "hidden_dim_dec": 32,
+        "emb_dim": 32,
         "layer_dims_gnn": [
             64
         ],

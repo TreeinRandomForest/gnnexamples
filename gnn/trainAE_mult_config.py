@@ -9,16 +9,31 @@ import json
 
 word_to_idx, idx_to_word, data, data_emb = prepare_data_vocab("data", func=live_feat, function_num=0)
 
+
+
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")  # Or "cuda:0" for the first GPU
+else:
+    device = torch.device("cpu")
+batch_size = 64 #config['batch_size']
+dataset = split_pp_into_sublists(data_emb, batch_size)
+(train, test) = split_train_test(dataset)
+train_gpu = batch_gnn_for_gpu(train, device, len(word_to_idx))
+test_gpu = batch_gnn_for_gpu(test, device, len(word_to_idx))
+weight = count_occurrences(train, word_to_idx, device)
+
 # Read configuration from JSON file
 with open('config.json') as f:
     configs = json.load(f)
 
+ratio_mix = 0.5
 
 for config_name, config in configs.items():
     # Load configuration variables to exact names
     is_gnn = config["is_gnn"]
     bidir = config['bidir']
-    batch_size = config['batch_size']
+    
     num_layers_enc = config['num_layers_enc']
     hidden_dim_enc = config['hidden_dim_enc']
     num_layers_dec = config['num_layers_dec']
@@ -30,10 +45,8 @@ for config_name, config in configs.items():
     N_max    = len(word_to_idx)+1
     dir = 2 if bidir==True else 1
 
-
-
-    dataset = split_pp_into_sublists(data_emb, batch_size)
-    (train, test) = split_train_test(dataset)
+    if 'ratio_mix' in config:
+        ratio_mix = config['ratio_mix']
 
     if is_gnn:
         ae = AutoEncoder_gnnrnn(batch_size     = batch_size,
@@ -55,18 +68,13 @@ for config_name, config in configs.items():
             emb_dim        = emb_dim,
             N_max          = N_max)
 
-    if torch.cuda.is_available():
-        device = torch.device("cuda")  # Or "cuda:0" for the first GPU
-    else:
-        device = torch.device("cpu")
+    
 
     #device = torch.device("cpu")
     ae.to(device)
 
 
-    train_gpu = batch_gnn_for_gpu(train, device, len(word_to_idx))
-    test_gpu = batch_gnn_for_gpu(test, device, len(word_to_idx))
-    weight = count_occurrences(train, word_to_idx, device)
+    
 
 
     criterion = nn.CrossEntropyLoss(ignore_index=len(word_to_idx), weight=weight)
@@ -93,7 +101,7 @@ for config_name, config in configs.items():
             cntBatch += 1
             #print("seq ->", padded_seq.shape)
             #print("lengths -> ", min(lengths), ":", max(lengths))
-            out = ae(padded_seq, padded_seq_dec, lengths, edge_index, mode="mix", ratio=0.5, ratio_mix=0.5)
+            out = ae(padded_seq, padded_seq_dec, lengths, edge_index, mode="mix", ratio=0.5, ratio_mix=ratio_mix)
             #print(out[:,-1,:])
             loss = criterion(out.flatten(0).reshape(-1,N_max), padded_seq.flatten())
             #print(out.flatten(0).reshape(-1,N_max).argmax(dim=1).to("cpu").tolist())
