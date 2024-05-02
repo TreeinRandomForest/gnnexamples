@@ -56,6 +56,7 @@ for config_name, config in configs.items():
     if 'mode' in config:
         mode = config['mode']
 
+    
     if is_gnn:
         ae = AutoEncoder_gnnrnn(batch_size     = batch_size,
                 bidir          = bidir,

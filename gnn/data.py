@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import torch
 from torch_geometric.data import Data
+from torch_geometric.utils import add_self_loops
 
 from tokenizer import process_bb_tokenizer
 
@@ -102,6 +103,18 @@ def batch_gnn_for_gpu(dataset, device, pad_idx):
         seq = [s.to(device) for s in seq]
         padded_seq = pad_sequence(seq, batch_first=True, padding_value=pad_idx)
         lengths = [len(s) for s in seq]
+        data_gpu.append((padded_seq, padded_seq_dec, lengths, edge_index.to(device)))
+    return data_gpu
+
+def batch_gnngat_for_gpu(dataset, device, pad_idx):
+    data_gpu = []
+    for (seq, edge_index) in dataset:
+        seq_dec = [torch.cat((torch.tensor([pad_idx]), s[:-1]), dim=0).to(device) for s in seq]
+        padded_seq_dec = pad_sequence(seq_dec, batch_first=True, padding_value=pad_idx)
+        seq = [s.to(device) for s in seq]
+        padded_seq = pad_sequence(seq, batch_first=True, padding_value=pad_idx)
+        lengths = [len(s) for s in seq]
+        edge_index, _ = add_self_loops(edge_index)
         data_gpu.append((padded_seq, padded_seq_dec, lengths, edge_index.to(device)))
     return data_gpu
 

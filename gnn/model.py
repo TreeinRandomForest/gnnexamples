@@ -1022,7 +1022,7 @@ class AutoEncoder_gnngatrnn(nn.Module):
                 self.pred  = nn.Linear(in_features=self.dir*hidden_dim_dec*2,
                                       out_features=N_max)
                 
-        def forward(self, seq, seq_dec, lengths, edge_index, mode="teaching", ratio=1, ratio_mix=0.5):
+        def forward(self, seq, seq_dec, lengths, edge_index, mode="teaching", ratio=1, ratio_mix=0.5, return_attention_weights=False):
                 padded_seq_emb = self.emb(seq)
                 packed_padded_seq_emb = pack_padded_sequence(padded_seq_emb,
                                                         lengths=lengths,#.tolist(),
@@ -1032,16 +1032,23 @@ class AutoEncoder_gnngatrnn(nn.Module):
                 _, (hn, cn) = self.enc(packed_padded_seq_emb)
                 
                 #print(hn.shape)
-
-                hn_gnn = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index)
+                if return_attention_weights:
+                    hn_gnn, (edge_index_gat, alpha_gat) = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index, return_attention_weights=True)
+                else:
+                    hn_gnn = self.gnn1(hn.permute(1,0,2).flatten(1), edge_index)
+                
                 cn_gnn = self.gnn2(cn.permute(1,0,2).flatten(1), edge_index)
                 #print(hn.shape)
                 hn_gnn = self.proj1(hn_gnn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 cn_gnn = self.proj2(cn_gnn).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
-
+                
                 hn_rnn = self.proj1(hn.permute(1,0,2).flatten(1)).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
                 cn_rnn = self.proj2(cn.permute(1,0,2).flatten(1)).reshape(len(lengths),self.num_layers_dec*self.dir,-1).permute(1,0,2).contiguous()
+                '''
+                hn = hn_gnn
+                cn = cn_gnn
                 
+                '''
                 if mode!= "recursive":
                     hn_rnn = nn.Dropout(p=0.2)(hn_rnn)
                     cn_rnn = nn.Dropout(p=0.2)(cn_rnn)
@@ -1132,5 +1139,7 @@ class AutoEncoder_gnngatrnn(nn.Module):
                     '''
                     
                 #print(out_pred.shape)
-                
-                return out_pred
+                if return_attention_weights:
+                    return out_pred, (edge_index_gat, alpha_gat)
+                else:
+                    return out_pred
