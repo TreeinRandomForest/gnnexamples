@@ -997,12 +997,12 @@ class AutoEncoder_gnngatrnn(nn.Module):
 
 
                 self.gnn1 = GATConv(in_channels=self.dir*num_layers_enc*hidden_dim_enc,
-                                    out_channels=self.dir*num_layers_enc*hidden_dim_enc,
-                                    num_layers=num_layers_gnn)
+                                    out_channels=int(self.dir*num_layers_enc*hidden_dim_enc/num_layers_gnn),
+                                    heads=num_layers_gnn)
                 
                 self.gnn2 = GATConv(in_channels=self.dir*num_layers_enc*hidden_dim_enc,
-                                    out_channels=self.dir*num_layers_enc*hidden_dim_enc,
-                                    num_layers=num_layers_gnn)
+                                    out_channels=int(self.dir*num_layers_enc*hidden_dim_enc/num_layers_gnn),
+                                    heads=num_layers_gnn)
 
                 self.proj1 = nn.Linear(in_features=self.dir*num_layers_enc*hidden_dim_enc,
                                       out_features=self.dir*num_layers_dec*hidden_dim_dec) 

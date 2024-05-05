@@ -1,4 +1,4 @@
-from model import AutoEncoder_gnnrnn, AutoEncoder_rnn
+from model import AutoEncoder_gnnrnn, AutoEncoder_rnn, AutoEncoder_gnngatrnn
 from data import prepare_data_vocab, live_feat, batch_gnn_for_gpu, split_pp_into_sublists, split_train_test, count_occurrences
 import torch
 import torch.nn as nn
@@ -6,11 +6,16 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import sys
+
+if len(sys.argv) < 2:
+    filename = 'config.json'
+else:
+    filename = sys.argv[1]
 
 word_to_idx, idx_to_word, data, data_emb = prepare_data_vocab("data", func=live_feat, function_num=0)
 
-
-
+print(filename)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")  # Or "cuda:0" for the first GPU
@@ -24,12 +29,14 @@ test_gpu = batch_gnn_for_gpu(test, device, len(word_to_idx))
 weight = count_occurrences(train, word_to_idx, device)
 
 # Read configuration from JSON file
-with open('config.json') as f:
+with open(filename) as f:
     configs = json.load(f)
 
 ratio_mix = 0.5
 ratio = 0.5
 mode = 'mix'
+is_gat = False
+num_layers_gnn = 1
 
 for config_name, config in configs.items():
     # Load configuration variables to exact names
@@ -56,17 +63,35 @@ for config_name, config in configs.items():
     if 'mode' in config:
         mode = config['mode']
 
+    if 'is_gat' in config:
+        is_gat = config['is_gat']
+        
+    if 'num_layers_gnn' in config:
+        num_layers_gnn = config['num_layers_gnn']
     
     if is_gnn:
-        ae = AutoEncoder_gnnrnn(batch_size     = batch_size,
-                bidir          = bidir,
-                num_layers_enc = num_layers_enc,
-                hidden_dim_enc = hidden_dim_enc,
-                num_layers_dec = num_layers_dec,
-                hidden_dim_dec = hidden_dim_dec,
-                layer_dims_gnn = layer_dims_gnn,
-                emb_dim        = emb_dim,
-                N_max          = N_max)
+        if is_gat:
+            ae = AutoEncoder_gnngatrnn(batch_size     = batch_size,
+            bidir          = True,
+            num_layers_enc = num_layers_enc,
+            hidden_dim_enc = hidden_dim_enc,
+            num_layers_dec = num_layers_dec,
+            hidden_dim_dec = hidden_dim_dec,
+            num_layers_gnn = num_layers_gnn,
+            emb_dim        = emb_dim,
+            N_max          = N_max)
+            print("GAT")
+        else:
+            ae = AutoEncoder_gnnrnn(batch_size     = batch_size,
+                    bidir          = bidir,
+                    num_layers_enc = num_layers_enc,
+                    hidden_dim_enc = hidden_dim_enc,
+                    num_layers_dec = num_layers_dec,
+                    hidden_dim_dec = hidden_dim_dec,
+                    layer_dims_gnn = layer_dims_gnn,
+                    emb_dim        = emb_dim,
+                    N_max          = N_max)
+            print("GNN")
         ae.to(device)
         #optimizer = optim.Adam(ae.parameters(), lr=0.01, weight_decay=0.001)
     else:
@@ -78,6 +103,7 @@ for config_name, config in configs.items():
             hidden_dim_dec = hidden_dim_dec,
             emb_dim        = emb_dim,
             N_max          = N_max)
+        print("LSTM")
         ae.to(device)
         #optimizer = optim.Adam(ae.parameters(), lr=0.01)
 

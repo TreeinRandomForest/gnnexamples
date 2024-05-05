@@ -40,7 +40,7 @@
     },
 "config_3":    {
         "is_gnn": false,
-        "is_gat": true,
+        "is_gat": false,
         "bidir": true,
         "batch_size": 64,
         "num_layers_enc": 2,

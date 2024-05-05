@@ -22,13 +22,13 @@ def shuffle_list(original_list):
     random.shuffle(shuffled_list)  
     return shuffled_list
 
-def split_train_test(dataset, ratio=0.8, shuffle=True):
+def split_train_test(dataset, ratio=0.8, drop_rate=0, shuffle=True):
     if shuffle:
         new_dataset = shuffle_list(dataset)
     else:
         new_dataset = dataset[:]
-
-    ind_test = int(ratio*len(dataset))
+    new_dataset = new_dataset[:int((1-drop_rate)*len(new_dataset))]
+    ind_test = int(ratio*len(new_dataset))
     return (new_dataset[:ind_test], new_dataset[ind_test:])
 
 def count_occurrences(dataset, word_to_idx, device):
