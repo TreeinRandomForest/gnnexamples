@@ -9,6 +9,7 @@ import json
 import sys
 from utils import calculate_variable
 import pickle
+from utils import save_edge_attr_graph
 
 if len(sys.argv) < 2:
     filename = 'config.json'
@@ -22,9 +23,14 @@ with open('data.pickle', 'rb') as f:
 new_data_emb = []
 for g in data_emb:
     num_nodes = len(g[1])
+    max_num_token_local = 0
+    for gg in g[1]:
+        if gg.shape[0]>max_num_token_local:
+            max_num_token_local = gg.shape[0]
     if g[0].max() < num_nodes:
-        new_data_emb.append(g)
-        
+        if num_nodes<256 and num_nodes>4:
+            if max_num_token_local<300:
+                new_data_emb.append(g)
 data_emb = new_data_emb
 
 print(filename)
@@ -35,7 +41,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
     drop_rate = 0
-
+drop_rate = 0
 print("DROP RATE: ", drop_rate)
 
 batch_size = 256 #config['batch_size']
@@ -54,6 +60,9 @@ ratio = 0.5
 mode = 'mix'
 is_gat = False
 num_layers_gnn = 1
+GAT_dropout = 0.4
+is_lstm = True
+is_norm = False
 
 for config_name, config in configs.items():
     # Load configuration variables to exact names
@@ -85,18 +94,30 @@ for config_name, config in configs.items():
         
     if 'num_layers_gnn' in config:
         num_layers_gnn = config['num_layers_gnn']
+
+    if 'GAT_dropout' in config:
+        GAT_dropout = config['GAT_dropout']
     
+    if 'is_lstm' in config:
+        is_lstm = config['is_lstm']
+    
+    if 'is_norm' in config:
+        is_norm = config['is_norm']
+
     if is_gnn:
         if is_gat:
             ae = AutoEncoder_gnngatrnn(batch_size     = batch_size,
-            bidir          = True,
+            bidir          = bidir,
             num_layers_enc = num_layers_enc,
             hidden_dim_enc = hidden_dim_enc,
             num_layers_dec = num_layers_dec,
             hidden_dim_dec = hidden_dim_dec,
             num_layers_gnn = num_layers_gnn,
             emb_dim        = emb_dim,
-            N_max          = N_max)
+            N_max          = N_max,
+            GAT_dropout    = GAT_dropout,
+            is_lstm=is_lstm,
+            is_norm=is_norm)
             print("GAT")
         else:
             ae = AutoEncoder_gnnrnn(batch_size     = batch_size,
@@ -119,18 +140,22 @@ for config_name, config in configs.items():
             num_layers_dec = num_layers_dec,
             hidden_dim_dec = hidden_dim_dec,
             emb_dim        = emb_dim,
-            N_max          = N_max)
-        print("LSTM")
+            N_max          = N_max,
+            is_lstm=is_lstm)
+        print("RNN")
         ae.to(device)
         #optimizer = optim.Adam(ae.parameters(), lr=0.01)
 
     #device = torch.device("cpu")
     
-
+    print("---------------------------------------------------------------------------------")
+    print(ae)
+    print("---------------------------------------------------------------------------------")
 
     
 
-    optimizer = optim.Adam(ae.parameters(), lr=0.01)
+    #optimizer = optim.Adam(ae.parameters(), lr=0.01)
+    optimizer = optim.AdamW(ae.parameters(), lr=0.001, weight_decay=0.01)
     criterion = nn.CrossEntropyLoss(ignore_index=len(word_to_idx), weight=weight)
     #data_emb_device = [(edge_index.to(device), [bb.to(device) for bb in node_embs ]) for (edge_index, node_embs) in data_emb] 
     
@@ -173,6 +198,8 @@ for config_name, config in configs.items():
         # Optionally, you can print the learning rate to monitor its changes
             #print("Learning Rate:", optimizer.param_groups[0]['lr'])
         if epoch%5==0 or (epoch+1)==epoch_num:
+            if (epoch+1)==epoch_num:
+                ae.eval()
             print(f'For {j} Tokens List in Train set: Epoch {epoch+1}/{epoch_num}, Average Loss: {total_loss/cntBatch:.5f}, Acuuracy: {np.exp(-total_loss/cntBatch)*100:.5f}', end='\n')
             cntBatch_test = 0
             total_loss_test = 0
@@ -192,23 +219,32 @@ for config_name, config in configs.items():
         loss_train.append(total_loss/cntBatch)
         accu_train.append(np.exp(-total_loss/cntBatch)*100)
 
-    fig, axs = plt.subplots(2, 2, figsize=(10,6)) 
+
+
+    fig, axs = plt.subplots(1, 2, figsize=(12,5)) 
     x = [i*5 for i in range(len(accu_test))]
-    axs[0,0].plot(loss_train)
-    axs[0,0].set_ylabel("loss")
-    axs[0,0].set_xlabel("epochs")
-    axs[0,0].set_title("train")
-    axs[1,0].plot(accu_train)
-    axs[1,0].set_ylabel("Accuracy")
-    axs[1,0].set_xlabel("epochs")
-    axs[1,0].set_title("train")
-    axs[0,1].plot(x, loss_test)
-    axs[0,1].set_ylabel("loss")
-    axs[0,1].set_xlabel("epochs")
-    axs[0,1].set_title("test")
-    axs[1,1].plot(x, accu_test)
-    axs[1,1].set_ylabel("Accuracy")
-    axs[1,1].set_xlabel("epochs")
-    axs[1,1].set_title("test")
+    axs[0].plot(loss_train)
+    axs[0].set_ylabel("loss")
+    axs[0].set_xlabel("epochs")
+    axs[0].set_title("train")
+    axs[1].plot(accu_train)
+    axs[1].set_ylabel("Accuracy")
+    axs[1].set_xlabel("epochs")
+    axs[1].set_title("train")
+    axs[0].plot(x, loss_test)
+    axs[0].legend(['train', 'test'])
+    axs[1].plot(x, accu_test)
+    axs[1].legend(['train', 'test'])
+    axs[0].grid(True)
+    axs[1].grid(True)
     plt.tight_layout()
     plt.savefig('AE_result_'+config_name+'.png')
+
+    if is_gnn and is_gat:
+        batch_cnt = -1
+        for (padded_seq, padded_seq_dec, lengths, edge_index) in test_gpu:
+                batch_cnt+=1
+                out, (edge_index_gat, alpha_gat) = ae(padded_seq, padded_seq_dec, lengths, edge_index, mode="recursive", ratio=0.25, ratio_mix=0.8, return_attention_weights=True)
+                save_edge_attr_graph(edge_index_gat, alpha_gat, batch_cnt)
+                if batch_cnt>1:
+                        break

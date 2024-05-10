@@ -27,7 +27,7 @@
         "hidden_dim_dec": 64,
         "emb_dim": 64,
         "mode": "teaching",
-        "ratio": 0.2,
+        "ratio": 0.8,
         "ratio_mix": 0.2,
         "layer_dims_gnn": [
             64
@@ -61,7 +61,7 @@
         "hidden_dim_dec": 64,
         "emb_dim": 64,
         "mode": "teaching",
-        "ratio": 0.2,
+        "ratio": 0.8,
         "ratio_mix": 0.2,
         "layer_dims_gnn": [
             16, 8
